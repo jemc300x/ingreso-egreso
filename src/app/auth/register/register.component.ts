@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -10,7 +12,11 @@ export class RegisterComponent implements OnInit {
 
   registerForm!: FormGroup;
 
-  constructor(private fb: FormBuilder) { }
+  constructor(
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private router: Router
+  ) { }
 
   ngOnInit(): void {
     this.registerForm = this.fb.group({
@@ -21,7 +27,11 @@ export class RegisterComponent implements OnInit {
   }
 
   onRegister() {
-    console.log(this.registerForm.value);
+    if (this.registerForm.invalid) return;
+    const { nombre, correo, password } = this.registerForm.value;
+    this.authService.crearUsuario(nombre, correo, password)
+      .then(credenciales => this.router.navigate(['/']))
+      .catch(err => console.error(err));
   }
 
 }

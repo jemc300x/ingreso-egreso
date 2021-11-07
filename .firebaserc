@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "ingreso-egreso-eb129": {
+      "hosting": {
+        "ingreso-egreso": [
+          "ingreso-egreso-eb129"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "default": "ingreso-egreso-eb129"
+  }
+}
