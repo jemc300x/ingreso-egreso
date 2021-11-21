@@ -70,4 +70,10 @@ export class AuthService {
       );
   }
 
+<<<<<<< HEAD
+=======
+  onDestroy() {
+    this.unSubscribe();
+  }
+>>>>>>> c34b2f7a3937e438584439f9aa2c00db8662404a
 }
