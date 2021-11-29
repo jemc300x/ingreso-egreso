@@ -1,9 +1,10 @@
 import { createReducer, on } from '@ngrx/store';
 import User from '../shared/interface/user.interface';
+import { Usuario } from '../shared/models/usuario.model';
 import * as auth from './auth.actions';
 
 export interface AuthState {
-  user: User | null
+  user: Usuario | null
 };
 
 const initialState: AuthState = {

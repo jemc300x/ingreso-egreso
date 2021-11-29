@@ -1,39 +1,57 @@
 import { Injectable } from '@angular/core';
 import { Auth, authState, createUserWithEmailAndPassword } from '@angular/fire/auth';
+import { AngularFireAuth } from '@angular/fire/compat/auth';
+import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Firestore } from '@angular/fire/firestore';
 import { signInWithEmailAndPassword, signOut } from '@firebase/auth';
 import { addDoc, collection, doc, getFirestore, onSnapshot, setDoc, Unsubscribe } from '@firebase/firestore';
 import { Store } from '@ngrx/store';
+import { Subscription, UnsubscriptionError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AppState } from '../app.reducer';
 import * as authActions from '../auth/auth.actions';
+import * as ingresoEgresoActions from '../ingreso-egreso/ingreso-egreso.actions';
 import User from '../shared/interface/user.interface';
+import { Usuario } from '../shared/models/usuario.model';
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
 
-  db: Firestore = getFirestore();
-  unSubscribe!: Unsubscribe;
+  // db: Firestore = getFirestore();
+  unSubscribe!: Subscription;
+  private _user!: Usuario | null;
+
+  get user() {
+    return this._user;
+  }
 
   constructor(
-    public auth: Auth,
-    private store: Store<AppState>
+    public auth: AngularFireAuth,
+    private store: Store<AppState>,
+    private firestore: AngularFirestore
   ) { }
 
   initAuthListener() {
-    authState(this.auth).subscribe(
+    this.auth.authState.subscribe(
       user => {
         console.log(user);
         if (user) {
-          this.unSubscribe = onSnapshot(doc(this.db, `${user.uid}/user`), (doc) => {
-            console.log('Current user', doc.data())
-            this.store.dispatch(authActions.setUser({user: {...(doc.data() as User)}}))
+          this.unSubscribe = this.firestore.doc(`${user.uid}/user`).valueChanges()
+            .subscribe((firestoreUser: any) => {
+              console.log('Current user', firestoreUser)
+              const user = Usuario.fromFirebase(firestoreUser);
+              this._user = user;
+              this.store.dispatch(authActions.setUser({ user }))
           });
         } else {
-          console.log('Llamar unsetuser')
+          console.log('Llamar unsetuser', this.unSubscribe)
+          this._user = null;
           this.store.dispatch(authActions.unSetUser());
-          this.unSubscribe();
+          this.store.dispatch(ingresoEgresoActions.unSetItems());
+          if (this.unSubscribe) {
+            this.unSubscribe.unsubscribe();
+          }
         }
       }
     )
@@ -41,39 +59,34 @@ export class AuthService {
 
   crearUsuario(nombre: string, email: string, password: string) {
     // console.log(nombre, email, password);
-    return createUserWithEmailAndPassword(this.auth, email, password)
-      .then(({ user }) => {
-        
-        const newUser: User = {
-          uid: user.uid,
-          name: nombre,
+    return this.auth.createUserWithEmailAndPassword(email, password)
+      .then( fuser => {
+        console.log('Usuario creado', fuser);
+        const newUser = new Usuario(
+          fuser.user?.uid as string,
+          nombre,
           email
-        }
+        )
         
-        return setDoc(doc(this.db, `${user.uid}/user`), newUser)
+        return this.firestore.doc(`${fuser.user?.uid}/user`)
+          .set({...newUser});
 
       })
   }
 
   login(email: string, password: string) {
-    return signInWithEmailAndPassword(this.auth, email, password);
+    return this.auth.signInWithEmailAndPassword(email, password);
   }
 
   logout() {
-    return signOut(this.auth);
+    return this.auth.signOut();
   }
 
   isAuth() {
-    return authState(this.auth)
+    return this.auth.authState
       .pipe(
         map(user => user != null)
       );
   }
 
-<<<<<<< HEAD
-=======
-  onDestroy() {
-    this.unSubscribe();
-  }
->>>>>>> c34b2f7a3937e438584439f9aa2c00db8662404a
 }
